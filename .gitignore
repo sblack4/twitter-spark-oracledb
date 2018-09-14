@@ -1,0 +1,14 @@
+.DS_Store
+
+config.json
+
+*.log
+*.jar
+*.tar.gz
+
+lib
+
+out
+target 
+metastore_db
+
