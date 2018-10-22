@@ -1,8 +1,10 @@
 package rocks.sblack.sparkstarter
 
 import java.sql.{Connection, ResultSet}
-import org.apache.log4j.LogManager
+
+import org.apache.log4j.{LogManager, Logger}
 import oracle.jdbc.pool.OracleDataSource
+import org.apache.spark.sql.SparkSession
 
 
 trait database extends  Serializable{
@@ -10,12 +12,12 @@ trait database extends  Serializable{
   def run(): Unit
 }
 
-class dbFactory(dbUser: String="", dbPassword: String="", dbConnString: String="") {
+class dbFactory(spark: SparkSession, dbUser: String="", dbPassword: String="", dbConnString: String="") {
   def get(): database = {
     if (! dbUser.isEmpty && ! dbPassword.isEmpty && ! dbConnString.isEmpty) {
       return new oracleDb(dbUser, dbPassword, dbConnString)
     }
-    new hiveDb()
+    new hiveDb(spark)
   }
 }
 
@@ -79,14 +81,26 @@ class oracleDb(dbUser: String, dbPassword: String, dbConnString: String) extends
   }
 }
 
-class hiveDb() extends database {
-  val createTables = ""
+class hiveDb(spark: SparkSession) extends database {
+  @transient lazy val log: Logger = LogManager.getLogger("dbLogger")
+
+  val createDatabase = "create database twitter LOCATION '/user/spark/twitter-db'"
+  val createTableCommand: String = "create table twitter.tweets ( " +
+    " tweetId BIGINT, " +
+    " createdAt Date, " +
+    " tweet VARCHAR(300), " +
+    " latlong VARCHAR(60), " +
+    " place VARCHAR(60), " +
+    " lang VARCHAR(60) " +
+    " ) "
 
   def executeQuery(command: String): Unit = {
-    ???
+    log.info(s"Query Hive: $command")
+    spark.sql(command)
   }
 
   def run(): Unit = {
-    ???
+    executeQuery(createDatabase)
+    executeQuery(createTableCommand)
   }
 }

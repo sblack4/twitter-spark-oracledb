@@ -1,7 +1,5 @@
 package rocks.sblack.sparkstarter
 
-import scala.util.parsing.json._
-import scala.io.Source
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.{StreamingContext, Seconds}
 import org.apache.spark.streaming.twitter.TwitterUtils
@@ -19,7 +17,7 @@ object main {
       Logger.getRootLogger.setLevel(Level.WARN)
     }
 
-    val configPath = "/tmp/config.json"
+    val configPath = Some(args(0)).getOrElse("/tmp/config.json")
     val config = new config(configPath)
 
     val spark = SparkSession.builder().getOrCreate()
@@ -27,7 +25,7 @@ object main {
 
     val tweets = TwitterUtils.createStream(ssc, None)
 
-    val db = new dbFactory(config.dbUser, config.dbPassword, config.dbConnString).get()
+    val db = new dbFactory(spark, config.dbUser, config.dbPassword, config.dbConnString).get()
     db.run()
 
     def handleTweet(tweet: Status): String = {
@@ -46,6 +44,7 @@ object main {
       val insertQuery = "insert into " +
         "twitter.tweets (tweetId, createdAt, tweet, latlong, place, lang) " +
         s" values($id, '$createdAt', '$text', '$latlong', '$place', '$lang')"
+      log.info(s"insert query: $insertQuery")
       db.executeQuery(insertQuery)
 
       insertQuery
